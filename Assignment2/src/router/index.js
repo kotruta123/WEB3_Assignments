@@ -9,7 +9,7 @@ const routes = [
         component: SetupView
     },
     {
-        path: '/game',
+        path: '/game/:bots',
         name: 'game',
         component: GameView
     }
