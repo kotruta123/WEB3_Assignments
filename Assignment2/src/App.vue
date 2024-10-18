@@ -1,9 +1,6 @@
 <template>
   <div id="app">
     <!-- Main navigation and layout -->
-    <header>
-      <h1>UNO Game</h1>
-    </header>
 
     <!-- Main content where different views (setup, game, etc.) will be rendered -->
     <main>
@@ -11,7 +8,7 @@
     </main>
 
     <footer>
-      <p>&copy; 2024 UNO Game by Your Name</p>
+      <p>&copy; 2024 UNO Game by Alexandru Cotruta & Jakub Cezary Kolando</p>
     </footer>
   </div>
 </template>
@@ -28,7 +25,9 @@ export default {
   text-align: center;
   font-family: Avenir, Helvetica, Arial, sans-serif;
   color: #2c3e50;
-  margin-top: 20px;
+  background: url('../public/images/colorfoul.svg') no-repeat;
+  background-size: cover;
+  height: 100vh;
 }
 
 header {
@@ -44,9 +43,6 @@ footer {
 }
 
 main {
-  margin: 20px auto;
-  max-width: 800px;
-  padding: 20px;
   background-color: #f7f7f7;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);

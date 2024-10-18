@@ -2,6 +2,30 @@
   <div class="game">
     <h1>UNO Game</h1>
 
+    <!-- Trigger/Open The Modal 
+    <button @click="openModal">Open Modal</button>
+  -->
+    <!-- The Modal -->
+    <div ref="wildColorsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Select a color</h2>
+        </div>
+        <div class="modal-body">
+          <button @click="selectWildColor('green')" class="modal-button" style="background-color: #379711"></button>
+          <button @click="selectWildColor('red')" class="modal-button" style="background-color: #D72600"></button>
+          <button @click="selectWildColor('blue')" class="modal-button" style="background-color: #0956BF"></button>
+          <button @click="selectWildColor('yellow')" class="modal-button" style="background-color: #ECD407;"></button>
+        </div>
+      </div>
+    </div>
+
+    <!--Currently Played Color-->
+    <div class="playing-color" :style="{ backgroundColor: discardCardColor }">
+      Currently Played Color
+    </div>
+
+
     <!-- Deck and Discard Pile at the center -->
     <div class="center-area">
       <div class="deck" @click="drawCard">
@@ -69,15 +93,18 @@
     <button @click="playTurn" :disabled="!selectedCard && !isBotTurn" class="play-button">Play Turn</button>
 
     <!-- Circular Arrow Animation -->
+    <!--
     <div class="turn-arrow" :class="{ clockwise: isClockwise, counterclockwise: !isClockwise }" v-if="!gameOver">
       <img src="/images/arrow.png" alt="Turn Arrow" class="arrow-image" />
     </div>
+  -->
   </div>
 </template>
 
 <script>
 import PlayerHand from "@/views/PlayerHand.vue";
 import { UnoGame} from "@/game/Game.ts";
+
 
 export default {
   components: {
@@ -92,14 +119,20 @@ export default {
       selectedCard: null,
       gameOver: false,
       isClockwise: true, // to track the direction of play
+      selectedWildColor: null,
     };
   },
   mounted() {
-    this.initializeGame();
+    this.initializeGame(parseInt(this.$route.params.bots, 10));
+  },
+  watch: {
+    '$route.params.bots': function(newBots) {
+      this.initializeGame(parseInt(newBots, 10));
+    }
   },
   methods: {
-    initializeGame() {
-      const numBots = 3;
+    initializeGame(numBots) {
+      console.log(numBots)
       this.game = new UnoGame(1, numBots);
       this.players = this.game.players;
       this.discardPile = this.game.discardPile;
@@ -116,11 +149,15 @@ export default {
           return;
         }
 
-        if (this.game.playCard(this.selectedCard)) {
-          this.selectedCard = null;
+        if(this.selectedCard.value == "wild" || this.selectedCard.value == "+4"){
+          this.openModal(); 
+        } else{
+          if (this.game.playCard(this.selectedCard)) {
           this.updateGameState();
+          this.selectedCard = null;
         } else {
           alert("You can't play this card!");
+        }
         }
       } else {
         setTimeout(() => {
@@ -139,7 +176,7 @@ export default {
       if (playableCards.length > 0) {
         const cardPlayed = this.game.playCard(playableCards[0]);
         if (cardPlayed.value === 'Reverse') {
-          this.reverseDirection();
+          this.game.updateNextPlayer();
         }
       } else {
         botPlayer.drawCard(this.game.drawPile);
@@ -151,14 +188,16 @@ export default {
       if (!this.game) return;
 
       this.discardPileTop = this.game.discardPile[this.game.discardPile.length - 1];
+      this.isClockwise = this.game.getCurrentDirection() === 'clockwise' ? 1 : 0;
       if (!this.game.checkWinner()) {
         this.playTurn();
       }
     },
+    /*
     reverseDirection() {
       this.isClockwise = !this.isClockwise;
       this.game.reverseOrder();
-    },
+    },*/
     isCurrentPlayer(index) {
       return this.game && index === this.game.currentPlayerIndex;
     },
@@ -177,18 +216,129 @@ export default {
         return '/images/card-back.png';
       }
       return `/images/${card.color.toLowerCase()}_${card.value.toLowerCase().replace(' ', '')}.png`;
-    }
+    },
+    selectWildColor(color){
+      this.selectedWildColor = color;
+      this.selectedCard.color = this.selectCard();
+
+      //closing modal
+      this.$refs.wildColorsModal.style.display = 'none';
+
+      //play wild card
+      if (this.game.playCard(this.selectedCard)) {
+        this.updateGameState();
+        this.selectedCard = null;
+      }
+    },
+    openModal(){
+      this.$refs.wildColorsModal.style.display = 'block';
+    },
   },
   computed: {
     isBotTurn() {
       if (!this.game) return false;
       return this.game.isBotTurn();
-    }
+    },
+    discardCardColor() {
+      if (this.discardPileTop && this.discardPileTop.color) {
+        return this.discardPileTop.color.toLowerCase(); 
+      }
+      return this.selectedWildColor ? this.selectedWildColor.toLowerCase() : 'transparent';
+  },
   }
 };
 </script>
 
 <style scoped>
+.modal {
+  display: none;
+  position: absolute;
+  z-index: 1;
+  margin: auto 0;
+  width: 40%;
+  height: 40%;
+  overflow: auto;
+}
+
+/* Modal Content */
+.modal-content {
+  position: relative;
+  background-color: #fefefe;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #888;
+  width: 80%;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+  -webkit-animation-name: animatetop;
+  -webkit-animation-duration: 0.4s;
+  animation-name: animatetop;
+  animation-duration: 0.4s
+}
+
+/* Add Animation */
+@-webkit-keyframes animatetop {
+  from {top:-300px; opacity:0} 
+  to {top:0; opacity:1}
+}
+
+@keyframes animatetop {
+  from {top:-300px; opacity:0}
+  to {top:0; opacity:1}
+}
+
+/* The Close Button */
+.close {
+  color: white;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-header {
+  padding: 2px 16px;
+  background-color: #5cb85c;
+  color: white;
+}
+
+.modal-body {
+  padding: 2px 16px;
+
+}
+
+.modal-footer {
+  padding: 2px 16px;
+  background-color: #5cb85c;
+  color: white;
+}
+
+.modal-button{
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+}
+
+.playing-color{
+  width: 200px;
+  height: 200px;
+  position: absolute;
+  right: 100px;
+  bottom: 100px;
+  text-align: center;
+  color: black;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
 /* Styling */
 .game {
   display: flex;
@@ -197,6 +347,7 @@ export default {
   justify-content: center;
   background: radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%);
   height: 100vh;
+  width: 100vw;
   color: white;
   position: relative;
   overflow: hidden;
