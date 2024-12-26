@@ -2,41 +2,62 @@
   <div class="game">
     <h1>UNO Game</h1>
 
-    <!-- Trigger/Open The Modal 
-    <button @click="openModal">Open Modal</button>
-  -->
-    <!-- The Modal -->
+    <!-- =========================
+         WILD COLOR SELECT MODAL
+         ========================= -->
     <div ref="wildColorsModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
           <h2>Select a color</h2>
         </div>
         <div class="modal-body">
-          <button @click="selectWildColor('green')" class="modal-button" style="background-color: #379711"></button>
-          <button @click="selectWildColor('red')" class="modal-button" style="background-color: #D72600"></button>
-          <button @click="selectWildColor('blue')" class="modal-button" style="background-color: #0956BF"></button>
-          <button @click="selectWildColor('yellow')" class="modal-button" style="background-color: #ECD407;"></button>
+          <!-- Four color buttons -->
+          <button
+              @click="selectWildColor('green')"
+              class="modal-button"
+              style="background-color: #379711"
+          />
+          <button
+              @click="selectWildColor('red')"
+              class="modal-button"
+              style="background-color: #D72600"
+          />
+          <button
+              @click="selectWildColor('blue')"
+              class="modal-button"
+              style="background-color: #0956BF"
+          />
+          <button
+              @click="selectWildColor('yellow')"
+              class="modal-button"
+              style="background-color: #ECD407"
+          />
         </div>
       </div>
     </div>
 
-    <!--Currently Played Color-->
+    <!-- =========================
+         COLOR INDICATOR
+         ========================= -->
     <div class="playing-color" :style="{ backgroundColor: discardCardColor }">
       Currently Played Color
     </div>
 
-
-    <!-- Deck and Discard Pile at the center -->
+    <!-- =========================
+         CENTER AREA
+         (DECK + DISCARD PILE)
+         ========================= -->
     <div class="center-area">
-      <!-- Draw deck-->
+      <!-- Deck to draw from -->
       <div class="deck" @click="handleDeckClick">
-        <img 
-            src="/images/drawing.png" 
-            alt="Deck" 
+        <img
+            src="/images/drawing.png"
+            alt="Deck"
             class="deck-image"
         />
       </div>
-      <!-- Discard deck-->
+
+      <!-- Discard pile -->
       <div class="discard-pile">
         <img
             v-if="discardPileTop"
@@ -44,517 +65,601 @@
             alt="Discard Pile"
             class="card"
         />
-
-        <!-- Stack of discarded cards -->
-        <div v-for="(card, index) in discardPile.slice(0, -1)" :key="index" class="discard-stack">
+        <!-- Older cards (stacked behind) -->
+        <div
+            v-for="(card, index) in discardPile.slice(0, -1)"
+            :key="index"
+            class="discard-stack"
+        >
           <img :src="getCardImage(card)" class="discard-card" />
         </div>
       </div>
     </div>
 
-    <!-- Players and Bots - Circular Layout -->
+    <!-- =========================
+         PLAYER AREA
+         ========================= -->
     <div class="player-area" v-if="players && players.length > 0">
-      <!-- Player Hand (Bottom) -->
-      <div class="player player-bottom" v-if="players[0]" :class="{ 'active-turn': isCurrentPlayer(0) }">
+      <!-- HUMAN (bottom) -->
+      <div
+          class="player player-bottom"
+          v-if="players[0]"
+          :class="{ 'active-turn': isCurrentPlayer(0) }"
+      >
         <div class="player-info">
-          <img src="/images/player_avatar.png" alt="Player Avatar" class="avatar" />
+          <img
+              src="/images/player_avatar.png"
+              alt="Player Avatar"
+              class="avatar"
+          />
           <h3>Player</h3>
         </div>
-        <PlayerHand :hand="players[0].cards" @cardSelected="selectCard" :selectedCard="selectedCard" />
+        <PlayerHand
+            :hand="players[0].cards"
+            @cardSelected="selectCard"
+            :selectedCard="selectedCard"
+        />
       </div>
 
-      <!-- Bot 1 (Left) -->
-      <div class="player player-left" v-if="players[1]" :class="{ 'active-turn': isCurrentPlayer(1) }">
+      <!-- BOT 1 (left) -->
+      <div
+          class="player player-left"
+          v-if="players[1]"
+          :class="{ 'active-turn': isCurrentPlayer(1) }"
+      >
         <div class="player-info">
-          <img src="/images/bot_avatar_1.png" alt="Bot 1 Avatar" class="avatar" />
+          <img
+              src="/images/bot_avatar_1.png"
+              alt="Bot 1 Avatar"
+              class="avatar"
+          />
           <h3>Bot 1</h3>
           <div class="bot-hand">
-            <img src="/images/background.png" alt="Bot's Cards" class="bot-card" v-for="i in players[1].cards.length" :key="i" />
+            <img
+                src="/images/background.png"
+                alt="Bot's Card"
+                class="bot-card"
+                v-for="i in players[1].cards.length"
+                :key="i"
+            />
           </div>
         </div>
       </div>
 
-      <!-- Bot 2 (Top) -->
-      <div class="player player-top" v-if="players[2]" :class="{ 'active-turn': isCurrentPlayer(2) }">
+      <!-- BOT 2 (top) -->
+      <div
+          class="player player-top"
+          v-if="players[2]"
+          :class="{ 'active-turn': isCurrentPlayer(2) }"
+      >
         <div class="player-info">
-          <img src="/images/bot_avatar_2.png" alt="Bot 2 Avatar" class="avatar" />
+          <img
+              src="/images/bot_avatar_2.png"
+              alt="Bot 2 Avatar"
+              class="avatar"
+          />
           <h3>Bot 2</h3>
           <div class="bot-hand">
-            <img src="/images/background.png" alt="Bot's Cards" class="bot-card" v-for="i in players[2].cards.length" :key="i" />
+            <img
+                src="/images/background.png"
+                alt="Bot's Card"
+                class="bot-card"
+                v-for="i in players[2].cards.length"
+                :key="i"
+            />
           </div>
         </div>
       </div>
 
-      <!-- Bot 3 (Right) -->
-      <div class="player player-right" v-if="players[3]" :class="{ 'active-turn': isCurrentPlayer(3) }">
+      <!-- BOT 3 (right) -->
+      <div
+          class="player player-right"
+          v-if="players[3]"
+          :class="{ 'active-turn': isCurrentPlayer(3) }"
+      >
         <div class="player-info">
-          <img src="/images/bot_avatar_3.png" alt="Bot 3 Avatar" class="avatar" />
+          <img
+              src="/images/bot_avatar_3.png"
+              alt="Bot 3 Avatar"
+              class="avatar"
+          />
           <h3>Bot 3</h3>
           <div class="bot-hand">
-            <img src="/images/background.png" alt="Bot's Cards" class="bot-card" v-for="i in players[3].cards.length" :key="i" />
+            <img
+                src="/images/background.png"
+                alt="Bot's Card"
+                class="bot-card"
+                v-for="i in players[3].cards.length"
+                :key="i"
+            />
           </div>
         </div>
       </div>
     </div>
 
-    <button @click="playTurn" :disabled="!selectedCard && !isBotTurn" class="play-button">Play Turn</button>
-
-    <!-- Circular Arrow Animation -->
-    <!--
-    <div class="turn-arrow" :class="{ clockwise: isClockwise, counterclockwise: !isClockwise }" v-if="!gameOver">
-      <img src="/images/arrow.png" alt="Turn Arrow" class="arrow-image" />
+    <!-- =========================
+         CONTROLS (UNO + PLAY)
+         ========================= -->
+    <div class="controls">
+      <button
+          @click="callUno"
+          :disabled="gameOver"
+          class="play-button"
+      >
+        UNO!
+      </button>
+      <button
+          @click="playTurn"
+          :disabled="(!selectedCard && !isBotTurn) || gameOver"
+          class="play-button"
+      >
+        Play Turn
+      </button>
     </div>
-  -->
   </div>
 </template>
 
 <script>
 import PlayerHand from "@/views/PlayerHand.vue";
-import { UnoGame} from "@/game/Game.ts";
-import { Value, Color } from "@/game/Card.ts";
+import { UnoGame } from "@/game/Game.ts";
+/**
+ * If you have a custom "Wild +2" in your `Card.ts`,
+ * e.g. Value.WildDrawTwo = "wild+2" or "wilddrawtwo",
+ * make sure the strings in this file match those in your game logic!
+ */
+import { Value } from "@/game/Card.ts";
 
 export default {
   components: {
-    PlayerHand,
+    PlayerHand
   },
   data() {
     return {
       game: null,
       players: [],
-      discardPileTop: null,
       discardPile: [],
+      discardPileTop: null,
       selectedCard: null,
       gameOver: false,
-      isClockwise: true, // to track the direction of play
+      isClockwise: true,
       selectedWildColor: null,
-      previousPlayerIndex: null, // Track previous player
-      showUnoIndicator: false, // "Uno" indicator
-      mustDrawCards: false,
-      drawCount: 0,
+      previousPlayerIndex: null,
+
+      // UNO logic
+      unoCalled: false,
+      botUnoStates: []
     };
   },
   mounted() {
+    // Initialize using route param "bots"
     this.initializeGame(parseInt(this.$route.params.bots, 10));
   },
   watch: {
-    '$route.params.bots': function(newBots) {
+    // If route changes, re-init
+    '$route.params.bots'(newBots) {
       this.initializeGame(parseInt(newBots, 10));
     }
   },
   methods: {
     initializeGame(numBots) {
-      console.log(numBots)
-      this.game = new UnoGame(1, numBots);
+      console.log("Starting UnoGame with", numBots, "bots");
+      this.game = new UnoGame(1, numBots); // 1 human + X bots
       this.players = this.game.players;
       this.discardPile = this.game.discardPile;
-      this.discardPileTop = this.game.discardPile[this.game.discardPile.length - 1];
+      this.discardPileTop = this.discardPile[this.discardPile.length - 1];
+
+      this.gameOver = false;
       this.selectedWildColor = null;
+      this.unoCalled = false;
+      // Track each bot’s UNO call
+      this.botUnoStates = this.players.map(() => false);
     },
+
+    // Human calls UNO
+    callUno() {
+      this.unoCalled = true;
+      alert("You have declared UNO!");
+    },
+
+    // Main play method
     playTurn() {
       if (!this.game) return;
 
-      console.log("Is Bot Turn:", this.isBotTurn);
-
+      console.log("Is it bot turn?", this.isBotTurn);
+      const currentIndex = this.game.currentPlayerIndex;
       const currentPlayer = this.game.currentPlayer();
 
+      // If it's the HUMAN
       if (!this.isBotTurn) {
-        
-        if(!this.canPlayCard) {
+        // If we have no playable cards
+        if (!this.canPlayCard) {
           this.drawCard();
           this.skipTurn();
+          return;
         }
 
-
+        // If no card is selected
         if (!this.selectedCard) {
           alert("Please select a card to play!");
           return;
         }
 
-        if(this.selectedCard.value === Value.Wild || this.selectedCard.value === Value.WildDrawFour){
-          this.openModal(); 
-        } else{
-          if (this.game.playCard(this.selectedCard)) {
-            this.previousPlayerIndex = this.game.currentPlayerIndex;
-            this.updateGameState();
-            this.selectedCard = null;
-          } else {
+        // If it's a Wild, Wild +4, or *custom* Wild +2
+        const valLower = this.selectedCard.value.toLowerCase();
+        if (
+            valLower === Value.Wild.toLowerCase() ||         // "wild"
+            valLower === Value.WildDrawFour.toLowerCase() || // "+4" or "wilddrawfour"
+            valLower === "wild+2"                            // if you have a custom wild+2
+        ) {
+          // Show color picker
+          this.openModal();
+        } else {
+          // Attempt normal play
+          const success = this.game.playCard(this.selectedCard);
+          if (!success) {
             alert("You can't play this card!");
+          } else {
+            this.previousPlayerIndex = currentIndex;
+            // Check UNO logic
+            this.handleUnoForCurrentPlayer(currentIndex);
+            // Clear selection
+            this.selectedCard = null;
+            // Update UI
+            this.updateGameState();
           }
         }
-      } else {
+      }
+      // If it's a BOT
+      else {
         setTimeout(() => {
           this.playBotTurn();
-        }, 2000);
+        }, 1000);
       }
     },
-    playBotTurn() {
-      if (!this.game) return;
 
+    // Bot turn logic
+    playBotTurn() {
+      const botIndex = this.game.currentPlayerIndex;
       const botPlayer = this.game.currentPlayer();
-      const playableCards = botPlayer.cards.filter(card =>
-          botPlayer.isPlayable(card, this.discardPileTop, this.game.currentColor)
+
+      // See which cards are playable
+      const playable = botPlayer.cards.filter(c =>
+          botPlayer.isPlayable(c, this.discardPileTop, this.game.currentColor)
       );
 
-     
-      if (playableCards.length > 0) {
-        const cardToPlay = playableCards[0];
-        let success = false;
+      let success = false;
+      if (playable.length > 0) {
+        const cardToPlay = playable[0];
+        const valLower = cardToPlay.value.toLowerCase();
 
-        if (cardToPlay.value.toLowerCase() === 'wild' || cardToPlay.value.toLowerCase() === '+4') {
-          // Bot selects a color based on its strategy
-          const selectedColor = this.selectBotColor();
-          this.selectedWildColor = selectedColor;
-          success = this.game.playCard(cardToPlay, selectedColor);
-          console.log(`Bot has played: ${cardToPlay.color} ${cardToPlay.value} and selected color: ${selectedColor}`);
+        // If it's a wild, +4, or custom wild+2 => pick color
+        if (
+            valLower === Value.Wild.toLowerCase() ||
+            valLower === Value.WildDrawFour.toLowerCase() ||
+            valLower === "wild+2"
+        ) {
+          const chosenColor = this.selectBotColor();
+          success = this.game.playCard(cardToPlay, chosenColor);
+          console.log(`Bot ${botIndex} played ${cardToPlay.value} choosing color ${chosenColor}`);
         } else {
+          // Normal card
           success = this.game.playCard(cardToPlay);
-          console.log(`Bot has played: ${cardToPlay.color} ${cardToPlay.value}`);
+          console.log(`Bot ${botIndex} played ${cardToPlay.color} ${cardToPlay.value}`);
         }
 
         if (success) {
-          this.previousPlayerIndex = this.game.currentPlayerIndex;
-
-          if(cardToPlay.value.toLowerCase() === '+2') {
-            this.mustDrawCards = true;
-            this.drawCount = 2;
-          } else if (cardToPlay.value.toLowerCase() === '+4') {
-            this.mustDrawCards = true;
-            this.drawCount = 4;
-          }
-        } else {
-          console.log(`Bot attempted to play an unplayable card. Value: ${cardToPlay.value}, Color: ${cardToPlay.color}`);
+          this.previousPlayerIndex = botIndex;
+          this.handleUnoForCurrentPlayer(botIndex);
         }
-      } else {
-          botPlayer.drawCard(this.game.drawPile);
-          console.log('Bot drew a card');
-      }
-
-      this.updateGameState();
-    },
-    skipTurn() {
-      alert("No playable cards. Your turn is skipped");
-      this.game.currentPlayerIndex = this.game.playDirection.getNextPlayerIndex(this.game.currentPlayerIndex, this.game.players.length);
-      this.updateGameState();
-    },
-    updateGameState() {
-      if (!this.game) return;
-
-      this.discardPileTop = this.game.discardPile[this.game.discardPile.length - 1];
-      this.isClockwise = this.game.getCurrentDirection() === 'clockwise' ? 1 : 0;
-      const winnerIndex = this.game.checkWinner();
-      if(winnerIndex !== null) {
-        //handling game over logic
-        alert(`Player ${winnerIndex + 1} wins!`);
-        this.gameOver = true;
-        return;
       }
       else {
-        if(this.isBotTurn) {
-          this.playTurn();
-        } 
-        //else if (!this.canPlayCard){
-        //  this.skipTurn();
-       // }
-        else{
+        // No playable => draw
+        botPlayer.drawCard(this.game.drawPile);
+        console.log(`Bot ${botIndex} drew a card`);
+      }
+      // Update UI
+      this.updateGameState();
+    },
 
+    // Called if the human can't play
+    skipTurn() {
+      alert("No playable cards. Turn skipped.");
+      this.game.currentPlayerIndex = this.game.playDirection.getNextPlayerIndex(
+          this.game.currentPlayerIndex,
+          this.game.players.length
+      );
+      this.updateGameState();
+    },
+
+    // Re-check top discard, direction, possible winner
+    updateGameState() {
+      this.discardPileTop = this.discardPile[this.discardPile.length - 1];
+      this.isClockwise = (this.game.getCurrentDirection() === "clockwise");
+
+      const winnerIndex = this.game.checkWinner();
+      if (winnerIndex !== null) {
+        alert(`Player ${winnerIndex + 1} wins!`);
+        this.gameOver = true;
+        // Redirect to setup after short wait
+        setTimeout(() => {
+          this.$router.push({ name: "setup" });
+        }, 3000);
+        return;
+      }
+
+      // If next is a bot, auto-play
+      if (this.isBotTurn) {
+        this.playTurn();
+      }
+    },
+
+    // UNO logic when dropping to 1 card
+    handleUnoForCurrentPlayer(index) {
+      const handSize = this.players[index].cards.length;
+      if (handSize === 1) {
+        // If it's the human
+        if (index === 0) {
+          // If not called => possible penalty
+          if (!this.unoCalled) {
+            this.maybeGetCaughtNotCallingUno(index);
+          }
+          // reset
+          this.unoCalled = false;
+        } else {
+          // Bot might forget
+          const chance = Math.random();
+          const botCallsUNO = chance < 0.7; // e.g. 70% chance
+          this.botUnoStates[index] = botCallsUNO;
+          if (!botCallsUNO) {
+            console.log(`Bot ${index} forgot to call UNO!`);
+            this.maybeGetCaughtNotCallingUno(index);
+          } else {
+            console.log(`Bot ${index} called UNO!`);
+          }
         }
       }
     },
-    /*
-    reverseDirection() {
-      this.isClockwise = !this.isClockwise;
-      this.game.reverseOrder();
-    },*/
-    isCurrentPlayer(index) {
-      return this.game && index === this.game.currentPlayerIndex;
+
+    // Penalty if someone didn't call UNO
+    maybeGetCaughtNotCallingUno(index) {
+      const nextIndex = this.game.playDirection.getNextPlayerIndex(index, this.players.length);
+      // 50% chance next player catches them
+      if (Math.random() < 0.5) {
+        alert(`Player ${index + 1} did NOT call UNO and was caught! Draw 2 penalty cards.`);
+        for (let i = 0; i < 2; i++) {
+          this.players[index].drawCard(this.game.drawPile);
+        }
+      }
     },
+
+    // Select card from the player's hand
     selectCard(card) {
       this.selectedCard = card;
     },
+
+    // The human draws from the deck
     drawCard() {
-      if (!this.game) return;
-
-      const currentPlayer = this.game.currentPlayer();
-      currentPlayer.drawCard(this.game.drawPile);
+      const p = this.game.currentPlayer();
+      p.drawCard(this.game.drawPile);
       this.updateGameState();
+    },
 
-      if(!this.canPlayCard) {
-        this.skipTurn;
+    // Show modal to pick color
+    openModal() {
+      if (this.$refs.wildColorsModal) {
+        this.$refs.wildColorsModal.style.display = "block";
       }
     },
-    getCardImage(card) {
-      // wild card handling
-      if(card.value.toLowerCase().replace(' ', '') === 'wild') {
-        return `/images/wild_wild.png`;
-      }
 
-      // +4 card handling
-      if(card.value.toLowerCase() === '+4') {
-        return `/images/wild_+4.png`;
+    // Color chosen => finalize play
+    selectWildColor(color) {
+      if (this.$refs.wildColorsModal) {
+        this.$refs.wildColorsModal.style.display = "none";
       }
-
-      // Reverse card handling
-      if(card.value.toLowerCase() === 'reverse') {
-        return `/images/${card.color.toLowerCase()}_reverse.png`;
-      }
-
-      // Skip card handling
-      if(card.value.toLowerCase() === 'skip') {
-        return `/images/${card.color.toLowerCase()}_skip.png`;
-      }
-
-      // Draw Two card handling
-      if(card.value.toLowerCase() === 'drawtwo') {
-        return `/images/${card.color.toLowerCase()}_+2.png`;
-      }
-
-      else{
-        console.log(card.value);
-        return `/images/${card.color.toLowerCase()}_${card.value.toLowerCase().replace(' ', '')}.png`;
-      }
-
-    },
-    selectWildColor(color){
       this.selectedWildColor = color;
-
-      console.log('Selected Color:', color);
-      console.log('Selected Card:', this.selectedCard);
-
-      //closing modal
-      this.$refs.wildColorsModal.style.display = 'none';
-
-      //play wi ld card
-      if (this.game.playCard(this.selectedCard, color)) {
+      // Attempt to play the wild card with chosen color
+      const success = this.game.playCard(this.selectedCard, color);
+      if (success) {
+        this.handleUnoForCurrentPlayer(this.game.currentPlayerIndex);
         this.updateGameState();
-        this.selectedCard = null;
       }
+      // clear
+      this.selectedCard = null;
     },
-    openModal(){
-      this.$refs.wildColorsModal.style.display = 'block';
-    },
-    handleDeckClick(){
+
+    // If the user tries to draw while still having a playable card
+    handleDeckClick() {
       if (!this.canPlayCard) {
         this.drawCard();
       } else {
-        alert("You have playable cards");
+        alert("You have at least one playable card. You cannot draw right now.");
       }
     },
+
+    // Bot picks a color, typically the one they have the most of
     selectBotColor() {
-      const colorCount = { green: 0, red: 0, blue:0, yellow: 0};
       const botPlayer = this.game.currentPlayer();
+      const colorCount = { red: 0, green: 0, blue: 0, yellow: 0 };
 
       botPlayer.cards.forEach(card => {
-        if (colorCount.hasOwnProperty(card.color.toLowerCase())) {
-          colorCount[card.color.toLowerCase()]++;
+        const c = card.color.toLowerCase();
+        if (colorCount[c] !== undefined) {
+          colorCount[c]++;
         }
       });
 
-      //Selecting the color with the highest count of color he has
-      let selectedColor = 'green'; // Default color
+      let chosen = "red";
       let maxCount = -1;
-      for (const color in colorCount) {
-        if (colorCount[color] > maxCount) {
-          maxCount = colorCount[color];
-          selectedColor = color;
+      for (const clr in colorCount) {
+        if (colorCount[clr] > maxCount) {
+          maxCount = colorCount[clr];
+          chosen = clr;
         }
       }
 
-      // If no cards are present, select a random color
-      if (maxCount === 0) {
-        const colors = ['green', 'red', 'blue', 'yellow'];
-        selectedColor = colors[Math.floor(Math.random() * colors.length)];
+      // If no color, pick random
+      if (maxCount <= 0) {
+        const randomColors = ["red", "green", "blue", "yellow"];
+        chosen = randomColors[Math.floor(Math.random() * randomColors.length)];
       }
+      return chosen;
+    },
 
-      return selectedColor;
+    // Check if it's a player's turn
+    isCurrentPlayer(index) {
+      if (!this.game) return false;
+      return this.game.currentPlayerIndex === index;
+    },
+
+    // Build the card image path
+    getCardImage(card) {
+      const valLower = card.value.toLowerCase();
+      const colLower = card.color.toLowerCase();
+
+      // If you have "wild+2" as a custom name
+      if (valLower === "wild" || valLower === "wild ") {
+        return "/images/wild_wild.png";
+      }
+      if (valLower === "+4" || valLower === "wilddrawfour") {
+        return "/images/wild_+4.png";
+      }
+      if (valLower === "wild+2" || valLower === "wilddrawtwo") {
+        return "/images/wild_+2.png";
+      }
+      if (valLower === "reverse") {
+        return `/images/${colLower}_reverse.png`;
+      }
+      if (valLower === "skip") {
+        return `/images/${colLower}_skip.png`;
+      }
+      if (valLower === "drawtwo" || valLower === "+2") {
+        return `/images/${colLower}_+2.png`;
+      }
+      // else number card
+      return `/images/${colLower}_${valLower}.png`;
     }
   },
   computed: {
+    // If current player is a bot
     isBotTurn() {
       if (!this.game) return false;
       return this.game.isBotTurn();
     },
-    //determines played card color
+    // Show the color or fallback if wild is on top
     discardCardColor() {
-      if(this.discardPileTop) {
-        const value = this.discardPileTop.value.toLowerCase();
-
-        if (value === 'wild' || value === '+4') {
-          return this.selectedWildColor ? this.selectedWildColor.toLowerCase() : 'transparent';
+      if (this.discardPileTop) {
+        const valLower = this.discardPileTop.value.toLowerCase();
+        if (
+            valLower === "wild" ||
+            valLower === "+4" ||
+            valLower === "wilddrawfour" ||
+            valLower === "wild+2" ||
+            valLower === "wilddrawtwo"
+        ) {
+          // if we selected a color
+          return this.selectedWildColor ? this.selectedWildColor.toLowerCase() : "transparent";
         }
+        // Otherwise, use the discard's color
         if (this.discardPileTop.color) {
-          return this.discardPileTop.color.toLowerCase(); 
+          return this.discardPileTop.color.toLowerCase();
         }
       }
-      return 'transparent';
+      return "transparent";
     },
+    // If the human can play any card
     canPlayCard() {
       if (!this.game) return false;
-      const player = this.game.currentPlayer();
-      return player.cards.some(card => this.game.currentPlayer().isPlayable(card, this.discardPileTop, this.game.currentColor));
+      const p = this.game.currentPlayer();
+      // Check if at least one card is playable
+      return p.cards.some(card =>
+          p.isPlayable(card, this.discardPileTop, this.game.currentColor)
+      );
     }
   }
 };
 </script>
 
 <style scoped>
-.modal {
-  display: none;
-  position: absolute;
-  z-index: 1;
-  margin: auto 0;
-  width: 40%;
-  height: 40%;
-  overflow: auto;
-  z-index: 3;
-}
+/* Basic styling with a somewhat centered layout */
 
-/* Modal Content */
-.modal-content {
-  position: relative;
-  background-color: #fefefe;
-  margin: auto;
-  padding: 0;
-  border: 1px solid #888;
-  width: 80%;
-  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
-  -webkit-animation-name: animatetop;
-  -webkit-animation-duration: 0.4s;
-  animation-name: animatetop;
-  animation-duration: 0.4s
-}
-
-/* Add Animation */
-@-webkit-keyframes animatetop {
-  from {top:-300px; opacity:0} 
-  to {top:0; opacity:1}
-}
-
-@keyframes animatetop {
-  from {top:-300px; opacity:0}
-  to {top:0; opacity:1}
-}
-
-/* The Close Button */
-.close {
-  color: white;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.close:hover,
-.close:focus {
-  color: #000;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.modal-header {
-  padding: 2px 16px;
-  background-color: #5cb85c;
-  color: white;
-}
-
-.modal-body {
-  padding: 2px 16px;
-
-}
-
-.modal-footer {
-  padding: 2px 16px;
-  background-color: #5cb85c;
-  color: white;
-}
-
-.modal-button{
-  width: 50px;
-  height: 50px;
-  cursor: pointer;
-}
-
-.playing-color{
-  width: 200px;
-  height: 200px;
-  position: absolute;
-  right: 100px;
-  bottom: 100px;
-  text-align: center;
-  color: black;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-
-/* Styling */
 .game {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   background: radial-gradient(circle, rgba(63,94,251,1) 0%, rgba(252,70,107,1) 100%);
   height: 100vh;
   width: 100vw;
   color: white;
   position: relative;
   overflow: hidden;
+  padding-top: 20px;
 }
 
+h1 {
+  margin-bottom: 10px;
+}
+
+/* Center area */
 .center-area {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
 }
-
 .deck {
-  position: relative;
-  margin-right: 20px;
+  margin-right: 40px;
   cursor: pointer;
 }
-
 .deck-image {
   width: 100px;
   height: 150px;
 }
-
 .discard-pile {
   position: relative;
   width: 100px;
   height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
-
 .card {
   width: 100px;
   height: 150px;
   position: absolute;
 }
-
 .discard-stack {
   position: absolute;
   top: 0;
   left: 0;
-  transform: translateY(10px);
+  transform: translateY(8px);
   z-index: -1;
 }
-
 .discard-card {
   width: 100px;
   height: 150px;
 }
 
+/* Current color box */
+.playing-color {
+  width: 150px;
+  height: 150px;
+  position: absolute;
+  right: 50px;
+  bottom: 50px;
+  text-align: center;
+  color: black;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #fff;
+  border-radius: 8px;
+}
+
+/* Player layout */
 .player-area {
   position: relative;
   width: 100%;
-  height: 100%;
-  z-index: 1;
+  height: 55%;
 }
-
 .player {
   position: absolute;
   display: flex;
@@ -562,59 +667,98 @@ export default {
   align-items: center;
   justify-content: center;
 }
-
 .player-info {
   display: flex;
-  align-items: center;
-  justify-content: center;
   flex-direction: column;
+  align-items: center;
+  margin-bottom: 5px;
 }
-
 .avatar {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 }
-
 .bot-hand {
   display: flex;
   justify-content: center;
 }
-
 .bot-card {
   width: 50px;
   height: 75px;
   margin-left: -10px;
 }
 
+/* Positions for up to 4 players */
 .player-bottom {
-  bottom: 20px;
+  bottom: 0;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, 0);
 }
-
 .player-left {
-  left: 20px;
+  left: 30px;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(0, -50%);
 }
-
 .player-top {
-  top: 20px;
+  top: 0;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, 0);
 }
-
 .player-right {
-  right: 20px;
+  right: 30px;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translate(0, -50%);
 }
 
+/* Modal */
+.modal {
+  display: none;
+  position: absolute;
+  z-index: 3;
+  margin: auto;
+  width: 40%;
+  height: 40%;
+  overflow: auto;
+}
+.modal-content {
+  position: relative;
+  background-color: #fefefe;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #888;
+  width: 80%;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),
+  0 6px 20px 0 rgba(0,0,0,0.19);
+  animation: animatetop 0.4s;
+}
+@keyframes animatetop {
+  from { top:-300px; opacity:0 }
+  to { top:0; opacity:1 }
+}
+.modal-header {
+  padding: 2px 16px;
+  background-color: #5cb85c;
+  color: white;
+}
+.modal-body {
+  padding: 2px 16px;
+}
+.modal-button {
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  margin: 10px;
+}
+
+/* Controls area */
+.controls {
+  margin-top: 30px;
+  display: flex;
+  gap: 20px;
+}
 .play-button {
   padding: 10px 20px;
-  margin-top: 20px;
   background-color: #27ae60;
   border: none;
   border-radius: 5px;
@@ -622,45 +766,16 @@ export default {
   font-size: 16px;
   cursor: pointer;
 }
-
 .play-button[disabled] {
   background-color: #ccc;
   cursor: not-allowed;
 }
-
 .play-button:hover:enabled {
   background-color: #2ecc71;
 }
 
+/* Turn highlight */
 .active-turn {
   border: 2px solid #ffcc00;
-}
-
-.turn-arrow {
-  position: absolute;
-  bottom: 20%; /* Adjust to make it lower */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 50px;
-  height: 50px;
-  z-index: 10; /* Ensure it is above other elements */
-}
-
-.turn-arrow.clockwise {
-  animation: rotate-arrow-clockwise 2s infinite linear;
-}
-
-.turn-arrow.counterclockwise {
-  animation: rotate-arrow-counterclockwise 2s infinite linear;
-}
-
-@keyframes rotate-arrow-clockwise {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes rotate-arrow-counterclockwise {
-  0% { transform: rotate(360deg); }
-  100% { transform: rotate(0deg); }
 }
 </style>
