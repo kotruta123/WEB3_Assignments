@@ -28,9 +28,15 @@
 
     <!-- Deck and Discard Pile at the center -->
     <div class="center-area">
-      <div class="deck" @click="drawCard">
-        <img src="/images/drawing.png" alt="Deck" class="deck-image" />
+      <!-- Draw deck-->
+      <div class="deck" @click="handleDeckClick">
+        <img 
+            src="/images/drawing.png" 
+            alt="Deck" 
+            class="deck-image"
+        />
       </div>
+      <!-- Discard deck-->
       <div class="discard-pile">
         <img
             v-if="discardPileTop"
@@ -38,6 +44,7 @@
             alt="Discard Pile"
             class="card"
         />
+
         <!-- Stack of discarded cards -->
         <div v-for="(card, index) in discardPile.slice(0, -1)" :key="index" class="discard-stack">
           <img :src="getCardImage(card)" class="discard-card" />
@@ -104,7 +111,7 @@
 <script>
 import PlayerHand from "@/views/PlayerHand.vue";
 import { UnoGame} from "@/game/Game.ts";
-
+import { Value, Color } from "@/game/Card.ts";
 
 export default {
   components: {
@@ -120,6 +127,10 @@ export default {
       gameOver: false,
       isClockwise: true, // to track the direction of play
       selectedWildColor: null,
+      previousPlayerIndex: null, // Track previous player
+      showUnoIndicator: false, // "Uno" indicator
+      mustDrawCards: false,
+      drawCount: 0,
     };
   },
   mounted() {
@@ -137,27 +148,38 @@ export default {
       this.players = this.game.players;
       this.discardPile = this.game.discardPile;
       this.discardPileTop = this.game.discardPile[this.game.discardPile.length - 1];
+      this.selectedWildColor = null;
     },
     playTurn() {
       if (!this.game) return;
 
+      console.log("Is Bot Turn:", this.isBotTurn);
+
       const currentPlayer = this.game.currentPlayer();
 
       if (!this.isBotTurn) {
+        
+        if(!this.canPlayCard) {
+          this.drawCard();
+          this.skipTurn();
+        }
+
+
         if (!this.selectedCard) {
           alert("Please select a card to play!");
           return;
         }
 
-        if(this.selectedCard.value == "wild" || this.selectedCard.value == "+4"){
+        if(this.selectedCard.value === Value.Wild || this.selectedCard.value === Value.WildDrawFour){
           this.openModal(); 
         } else{
           if (this.game.playCard(this.selectedCard)) {
-          this.updateGameState();
-          this.selectedCard = null;
-        } else {
-          alert("You can't play this card!");
-        }
+            this.previousPlayerIndex = this.game.currentPlayerIndex;
+            this.updateGameState();
+            this.selectedCard = null;
+          } else {
+            alert("You can't play this card!");
+          }
         }
       } else {
         setTimeout(() => {
@@ -170,18 +192,48 @@ export default {
 
       const botPlayer = this.game.currentPlayer();
       const playableCards = botPlayer.cards.filter(card =>
-          botPlayer.isPlayable(card, this.discardPileTop)
+          botPlayer.isPlayable(card, this.discardPileTop, this.game.currentColor)
       );
 
+     
       if (playableCards.length > 0) {
-        const cardPlayed = this.game.playCard(playableCards[0]);
-        if (cardPlayed.value === 'Reverse') {
-          this.game.updateNextPlayer();
+        const cardToPlay = playableCards[0];
+        let success = false;
+
+        if (cardToPlay.value.toLowerCase() === 'wild' || cardToPlay.value.toLowerCase() === '+4') {
+          // Bot selects a color based on its strategy
+          const selectedColor = this.selectBotColor();
+          this.selectedWildColor = selectedColor;
+          success = this.game.playCard(cardToPlay, selectedColor);
+          console.log(`Bot has played: ${cardToPlay.color} ${cardToPlay.value} and selected color: ${selectedColor}`);
+        } else {
+          success = this.game.playCard(cardToPlay);
+          console.log(`Bot has played: ${cardToPlay.color} ${cardToPlay.value}`);
+        }
+
+        if (success) {
+          this.previousPlayerIndex = this.game.currentPlayerIndex;
+
+          if(cardToPlay.value.toLowerCase() === '+2') {
+            this.mustDrawCards = true;
+            this.drawCount = 2;
+          } else if (cardToPlay.value.toLowerCase() === '+4') {
+            this.mustDrawCards = true;
+            this.drawCount = 4;
+          }
+        } else {
+          console.log(`Bot attempted to play an unplayable card. Value: ${cardToPlay.value}, Color: ${cardToPlay.color}`);
         }
       } else {
-        botPlayer.drawCard(this.game.drawPile);
+          botPlayer.drawCard(this.game.drawPile);
+          console.log('Bot drew a card');
       }
 
+      this.updateGameState();
+    },
+    skipTurn() {
+      alert("No playable cards. Your turn is skipped");
+      this.game.currentPlayerIndex = this.game.playDirection.getNextPlayerIndex(this.game.currentPlayerIndex, this.game.players.length);
       this.updateGameState();
     },
     updateGameState() {
@@ -189,8 +241,23 @@ export default {
 
       this.discardPileTop = this.game.discardPile[this.game.discardPile.length - 1];
       this.isClockwise = this.game.getCurrentDirection() === 'clockwise' ? 1 : 0;
-      if (!this.game.checkWinner()) {
-        this.playTurn();
+      const winnerIndex = this.game.checkWinner();
+      if(winnerIndex !== null) {
+        //handling game over logic
+        alert(`Player ${winnerIndex + 1} wins!`);
+        this.gameOver = true;
+        return;
+      }
+      else {
+        if(this.isBotTurn) {
+          this.playTurn();
+        } 
+        //else if (!this.canPlayCard){
+        //  this.skipTurn();
+       // }
+        else{
+
+        }
       }
     },
     /*
@@ -210,22 +277,54 @@ export default {
       const currentPlayer = this.game.currentPlayer();
       currentPlayer.drawCard(this.game.drawPile);
       this.updateGameState();
+
+      if(!this.canPlayCard) {
+        this.skipTurn;
+      }
     },
     getCardImage(card) {
-      if (!card || !card.color || !card.value) {
-        return '/images/card-back.png';
+      // wild card handling
+      if(card.value.toLowerCase().replace(' ', '') === 'wild') {
+        return `/images/wild_wild.png`;
       }
-      return `/images/${card.color.toLowerCase()}_${card.value.toLowerCase().replace(' ', '')}.png`;
+
+      // +4 card handling
+      if(card.value.toLowerCase() === '+4') {
+        return `/images/wild_+4.png`;
+      }
+
+      // Reverse card handling
+      if(card.value.toLowerCase() === 'reverse') {
+        return `/images/${card.color.toLowerCase()}_reverse.png`;
+      }
+
+      // Skip card handling
+      if(card.value.toLowerCase() === 'skip') {
+        return `/images/${card.color.toLowerCase()}_skip.png`;
+      }
+
+      // Draw Two card handling
+      if(card.value.toLowerCase() === 'drawtwo') {
+        return `/images/${card.color.toLowerCase()}_+2.png`;
+      }
+
+      else{
+        console.log(card.value);
+        return `/images/${card.color.toLowerCase()}_${card.value.toLowerCase().replace(' ', '')}.png`;
+      }
+
     },
     selectWildColor(color){
       this.selectedWildColor = color;
-      this.selectedCard.color = this.selectCard();
+
+      console.log('Selected Color:', color);
+      console.log('Selected Card:', this.selectedCard);
 
       //closing modal
       this.$refs.wildColorsModal.style.display = 'none';
 
-      //play wild card
-      if (this.game.playCard(this.selectedCard)) {
+      //play wi ld card
+      if (this.game.playCard(this.selectedCard, color)) {
         this.updateGameState();
         this.selectedCard = null;
       }
@@ -233,18 +332,66 @@ export default {
     openModal(){
       this.$refs.wildColorsModal.style.display = 'block';
     },
+    handleDeckClick(){
+      if (!this.canPlayCard) {
+        this.drawCard();
+      } else {
+        alert("You have playable cards");
+      }
+    },
+    selectBotColor() {
+      const colorCount = { green: 0, red: 0, blue:0, yellow: 0};
+      const botPlayer = this.game.currentPlayer();
+
+      botPlayer.cards.forEach(card => {
+        if (colorCount.hasOwnProperty(card.color.toLowerCase())) {
+          colorCount[card.color.toLowerCase()]++;
+        }
+      });
+
+      //Selecting the color with the highest count of color he has
+      let selectedColor = 'green'; // Default color
+      let maxCount = -1;
+      for (const color in colorCount) {
+        if (colorCount[color] > maxCount) {
+          maxCount = colorCount[color];
+          selectedColor = color;
+        }
+      }
+
+      // If no cards are present, select a random color
+      if (maxCount === 0) {
+        const colors = ['green', 'red', 'blue', 'yellow'];
+        selectedColor = colors[Math.floor(Math.random() * colors.length)];
+      }
+
+      return selectedColor;
+    }
   },
   computed: {
     isBotTurn() {
       if (!this.game) return false;
       return this.game.isBotTurn();
     },
+    //determines played card color
     discardCardColor() {
-      if (this.discardPileTop && this.discardPileTop.color) {
-        return this.discardPileTop.color.toLowerCase(); 
+      if(this.discardPileTop) {
+        const value = this.discardPileTop.value.toLowerCase();
+
+        if (value === 'wild' || value === '+4') {
+          return this.selectedWildColor ? this.selectedWildColor.toLowerCase() : 'transparent';
+        }
+        if (this.discardPileTop.color) {
+          return this.discardPileTop.color.toLowerCase(); 
+        }
       }
-      return this.selectedWildColor ? this.selectedWildColor.toLowerCase() : 'transparent';
-  },
+      return 'transparent';
+    },
+    canPlayCard() {
+      if (!this.game) return false;
+      const player = this.game.currentPlayer();
+      return player.cards.some(card => this.game.currentPlayer().isPlayable(card, this.discardPileTop, this.game.currentColor));
+    }
   }
 };
 </script>
@@ -258,6 +405,7 @@ export default {
   width: 40%;
   height: 40%;
   overflow: auto;
+  z-index: 3;
 }
 
 /* Modal Content */
@@ -358,6 +506,7 @@ export default {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  z-index: 2;
 }
 
 .deck {
@@ -403,6 +552,7 @@ export default {
   position: relative;
   width: 100%;
   height: 100%;
+  z-index: 1;
 }
 
 .player {

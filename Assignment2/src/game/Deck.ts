@@ -1,4 +1,4 @@
-import { Card, Color, Value } from './Card';
+import { Card, Color, Points, Value } from './Card';
 
 export class UnoDeck {
     cards: Card[] = [];
@@ -37,8 +37,8 @@ export class UnoDeck {
                 Value.Skip,
                 Value.Reverse,
             ]) {
-                this.cards.push({ color, value });
-                if (value !== Value.Zero) this.cards.push({ color, value });
+                this.cards.push(new Card(color, value, Points[value]));
+                if (value !== Value.Zero) this.cards.push(new Card(color, value, Points[value]));
             }
         }
 
