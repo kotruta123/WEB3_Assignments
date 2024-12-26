@@ -1,37 +1,43 @@
 import { Card, Color } from './Card';
-import {UnoHand} from "./Hand";
-import {UnoDeck} from "./Deck"; // Assuming Card.ts is in the same directory
+import { UnoHand } from "./Hand";
+import { UnoDeck } from "./Deck";
 import { PlayDirection } from './PlayDirection';
 
 export class UnoGame {
-    players: UnoHand[] = [];   // List of players in the game
-    currentPlayerIndex: number = 0;  // Index of the current player
-    drawPile: UnoDeck = new UnoDeck();  // Deck from which cards are drawn
-    discardPile: Card[] = [];  // The pile of cards that have been played
-    bots: number[] = [];  // Array of bot player indexes
+    players: UnoHand[] = [];         // The list of players
+    currentPlayerIndex: number = 0;  // Index of the current player's turn
+    drawPile: UnoDeck = new UnoDeck();
+    discardPile: Card[] = [];
+    bots: number[] = [];
     playDirection: PlayDirection = new PlayDirection();
     currentColor: Color | null = null;
 
     constructor(playerCount: number, botCount: number) {
-        // Create hands for the player(s) and bots
+        // 1) Create and deal hands
         for (let i = 0; i < playerCount + botCount; i++) {
             const hand = new UnoHand();
-            for (let j = 0; j < 7; j++) {  // Deal 7 cards to each player
+            for (let j = 0; j < 7; j++) {
                 hand.drawCard(this.drawPile);
             }
             this.players.push(hand);
         }
-        // Add first card to the discard pile
+
+        // 2) Flip the top card of the deck onto the discard pile
         const firstCard = this.drawPile.draw()!;
         this.discardPile.push(firstCard);
 
-        if(firstCard.value.toLowerCase() === 'wild' || firstCard.value.toLocaleLowerCase() === '+4') {
+        // 3) Determine the initial color (if the first card is Wild or +4, pick a random color)
+        if (
+            firstCard.value.toLowerCase() === 'wild' ||
+            firstCard.value.toLowerCase() === '+4' ||
+            firstCard.value.toLowerCase() === 'wilddrawfour'
+        ) {
             this.currentColor = this.selectRandomColor();
         } else {
             this.currentColor = firstCard.color;
         }
 
-        // Assign bot player indexes
+        // 4) Mark which players are bots
         for (let i = playerCount; i < playerCount + botCount; i++) {
             this.bots.push(i);
         }
@@ -41,87 +47,181 @@ export class UnoGame {
         return this.players[this.currentPlayerIndex];
     }
 
+    /**
+     * Attempt to play a card from the current player's hand.
+     * If valid, update the next player (handle +2, +4, etc.)
+     */
     playCard(card: Card, selectedColor?: Color): boolean {
         const currentPlayer = this.currentPlayer();
 
+        // Attempt to remove the card from the player's hand (if playable)
         if (currentPlayer.playCard(card, this.discardPile, this.currentColor)) {
-            this.updateNextPlayer(card, selectedColor);  // Handle special cards (e.g. +2)
+            // If success, handle special logic (draw 2, wild color, skip, etc.)
+            this.updateNextPlayer(card, selectedColor);
             return true;
         }
         return false;
     }
 
+    /**
+     * Pick a random color (Red/Green/Blue/Yellow)
+     */
     selectRandomColor(): Color {
         const colors: Color[] = [Color.Green, Color.Red, Color.Blue, Color.Yellow];
         return colors[Math.floor(Math.random() * colors.length)];
     }
 
+    /**
+     * Handle the special logic of the card that was just played:
+     *   +2, +4, wild +2, wild +4, reverse, skip, etc.
+     */
     updateNextPlayer(card: Card, selectedColor?: Color): void {
-        // Handle special card logic, e.g., +2 cards
+        // The index of the "would-be" next player
+        const nextPlayerIndex = this.playDirection.getNextPlayerIndex(
+            this.currentPlayerIndex,
+            this.players.length
+        );
 
-        const nextPlayerIndex = this.playDirection.getNextPlayerIndex(this.currentPlayerIndex, this.players.length);
-        const cardValue = card.value.toLocaleLowerCase();
+        const cardValue = card.value.toLowerCase();
 
         switch(cardValue) {
+
+            // ======================
+            // WILD (no draw)
+            // ======================
             case 'wild':
-                if(selectedColor) {
+                if (selectedColor) {
                     this.currentColor = selectedColor;
                 }
                 break;
+
+            // ======================
+            // WILD +4
+            // ======================
+            // If your `Card.value` for wild draw four is exactly "+4",
+            // or "wilddrawfour", handle it here
             case '+4':
-                if(selectedColor){
+            case 'wilddrawfour':
+                if (selectedColor) {
                     this.currentColor = selectedColor;
                 }
-
-                for(let i=0; i < 4; i++) {
+                // Force next player to draw 4
+                for (let i = 0; i < 4; i++) {
                     this.players[nextPlayerIndex].drawCard(this.drawPile);
                 }
+                // Skip next player's turn
+                this.currentPlayerIndex = this.playDirection.getNextPlayerIndex(
+                    nextPlayerIndex,
+                    this.players.length
+                );
+                return; // end here
 
-                this.currentPlayerIndex = this.playDirection.getNextPlayerIndex(nextPlayerIndex, this.players.length);
-                return; // return to prevent setting next player index again after switch
-            case '+2':
-                this.currentColor = card.color;
+            // ======================
+            // WILD +2 (Custom Card)
+            // ======================
+            // If you have a custom "wild+2" or "wilddrawtwo"
+            case 'wild+2':
+            case 'wilddrawtwo':
+                if (selectedColor) {
+                    this.currentColor = selectedColor;
+                }
+                // Next player draws 2
                 for (let i = 0; i < 2; i++) {
                     this.players[nextPlayerIndex].drawCard(this.drawPile);
                 }
-                this.currentPlayerIndex = this.playDirection.getNextPlayerIndex(nextPlayerIndex, this.players.length);
-                return; // return to prevent setting next player index again after switch
-            case 'reverse':         
-                if(this.players.length === 2) {
-                    this.currentPlayerIndex = this.playDirection.getNextPlayerIndex(this.currentPlayerIndex, this.players.length);
+                // Then skip that player's turn
+                this.currentPlayerIndex = this.playDirection.getNextPlayerIndex(
+                    nextPlayerIndex,
+                    this.players.length
+                );
+                return;
+
+            // ======================
+            // Normal +2
+            // ======================
+            case '+2':
+            case 'drawtwo':
+                // For normal color-coded Draw 2 (e.g. Red +2)
+                // The color on the card determines currentColor
+                this.currentColor = card.color;
+                // Next player draws 2
+                for (let i = 0; i < 2; i++) {
+                    this.players[nextPlayerIndex].drawCard(this.drawPile);
+                }
+                // skip that player
+                this.currentPlayerIndex = this.playDirection.getNextPlayerIndex(
+                    nextPlayerIndex,
+                    this.players.length
+                );
+                return;
+
+            // ======================
+            // Reverse
+            // ======================
+            case 'reverse':
+                // If 2 players, reverse == skip other
+                if (this.players.length === 2) {
+                    this.currentPlayerIndex = this.playDirection.getNextPlayerIndex(
+                        this.currentPlayerIndex,
+                        this.players.length
+                    );
                     return;
                 }
+                // Else toggle direction
                 this.playDirection.toggle();
+                // The color is set to the card's color
+                this.currentColor = card.color;
                 break;
+
+            // ======================
+            // Skip
+            // ======================
             case 'skip':
-                const skippedPlayerIndex = this.playDirection.getNextPlayerIndex(nextPlayerIndex, this.players.length);
-                this.currentPlayerIndex = skippedPlayerIndex;
-                break;
+                // skip next
+                this.currentColor = card.color;
+                const skippedIndex = this.playDirection.getNextPlayerIndex(
+                    nextPlayerIndex,
+                    this.players.length
+                );
+                this.currentPlayerIndex = skippedIndex;
+                return;
+
+            // ======================
+            // Default = normal card
+            // ======================
             default:
+                // Just set the color to match the card played
                 this.currentColor = card.color;
                 break;
         }
-        // Move to the next player
-        //this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+
+        // If we reach here, we haven't returned => normal next turn
         this.currentPlayerIndex = nextPlayerIndex;
     }
 
+    /**
+     * Check if it's currently a bot's turn
+     */
     isBotTurn(): boolean {
-        // Check if the current player is a bot
         return this.bots.includes(this.currentPlayerIndex);
     }
 
+    /**
+     * e.g. "clockwise" or "anticlockwise"
+     */
     getCurrentDirection(): string {
         return this.playDirection.getDirection();
     }
 
+    /**
+     * Return the index of the winner if any player has 0 cards. Otherwise null.
+     */
     checkWinner(): number | null {
-        // Check if any player has run out of cards and won the game
         for (let i = 0; i < this.players.length; i++) {
             if (this.players[i].cards.length === 0) {
-                return i; // Return the index of the winner
+                return i;
             }
         }
-        return null;  // Return null if no winner yet
+        return null;
     }
 }
