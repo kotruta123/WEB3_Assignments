@@ -1,12 +1,26 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import httpInstance from '../../http-common';
 
-// Define an async thunk for login
+// Register thunk
+export const register = createAsyncThunk(
+  'auth/register',
+  async ({ name, email, password }, thunkAPI) => {
+    try {
+      const response = await httpInstance.post('/auth/register', { name, email, password });
+      return response.data.user; // Adjust based on your API response
+    } catch (error) {
+      // Return a rejected action with the error message
+      return thunkAPI.rejectWithValue(error.response.data.message || 'Registration failed');
+    }
+  }
+);
+
+// Login thunk
 export const login = createAsyncThunk(
   'auth/login',
   async ({ username, password }, thunkAPI) => {
     try {
-      const response = await axios.post('/auth/login', { username, password });
+      const response = await httpInstance.post('/auth/login', { username, password });
       return response.data.user; // Return user data
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data.message || 'Login failed');

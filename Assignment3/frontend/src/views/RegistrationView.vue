@@ -1,4 +1,4 @@
-<!-- OPTION API -->
+<!-- COMPOSITION API -->
 
 <template>
     <div id="app" class="container bg-white p-8">
@@ -40,30 +40,55 @@
 
 <script>
     import { useStore } from '../redux/redux-plugin';
-    import { login } from '../redux/slices/auth-slice';
-    import { computed } from 'vue';
+    import { register } from '../redux/slices/auth-slice';
+    import { computed, ref } from 'vue';
+    import { useRouter } from 'vue-router';
 
     export default {
-  name: 'Login',
-  data() {
-    return {
-      username: '',
-      password: '',
-    };
-  },
-  setup() {
-    const store = useStore();
-    const state = computed(() => store.getState().auth);
-    
-    const handleLogin = () => {
-      store.dispatch(login({ username: this.username, password: this.password }));
-    };
+      name: 'RegistrationView',
+      /*data() {
+        return {
+        };
+      },*/
+      setup() {
+        const store = useStore();
+        const state = computed(() => store.getState().auth);
+        const router = useRouter();
+        
+        // Reactive variables
+        const name = ref('');
+        const email = ref('');
+        const password = ref('');
+        const confirmPassword = ref('');
 
-    return {
-      handleLogin,
-      loading: computed(() => state.value.loading),
-      error: computed(() => state.value.error),
+        const loading = computed(() => state.value.loading);
+        const error = computed(() => state.value.error);
+
+        const signUp = async () => {
+          if (password.value !== confirmPassword.value) {
+            alert('Passwords not matching');
+            return;
+          }
+          try {
+            // Register dispatch
+            await store.dispatch(register({ name: name.value, email: email.value }));
+
+            // Redirection after registration
+            router.push('/login');
+          }catch(err) {
+            console.error(err);
+          }
+        }
+
+        return {
+          name,
+          email, 
+          password, 
+          confirmPassword,
+          signUp,
+          loading,
+          error,
+        };
+      },
     };
-  },
-};
 </script>
